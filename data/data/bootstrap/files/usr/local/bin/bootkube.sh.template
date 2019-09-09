@@ -286,6 +286,17 @@ bootkube_podman_run \
 	"${CLUSTER_BOOTSTRAP_IMAGE}" \
 	start --tear-down-early=false --asset-dir=/assets --required-pods="openshift-kube-apiserver/kube-apiserver,openshift-kube-scheduler/openshift-kube-scheduler,openshift-kube-controller-manager/kube-controller-manager,openshift-cluster-version/cluster-version-operator,openshift-machine-api/machine-api-operator"
 
+# If this service exits and tears down the proxy that lets other
+# services talk to the cluster, we run the risk of failing to finish
+# setting up the resources the installer needs to create. Therefore,
+# we explicitly wait for the "openshift" service, which sets up those
+# resources, to complete before we exit.
+until [ -f /opt/openshift/.openshift.done ]
+do
+    echo "Waiting for openshift service to finish..."
+    sleep 5
+done
+
 # Workaround for https://github.com/opencontainers/runc/pull/1807
 touch /opt/openshift/.bootkube.done
 echo "bootkube.service complete"
